@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestor Vending Pro + Exportación</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body { font-family: Arial; margin: 20px; background: #f6f6f6; }
+  h1, h2, h3 { text-align: center; }
+  .screen { display: none; }
+  .active { display: block; }
+  button { width: 100%; margin: 6px 0; padding: 10px; font-size: 16px; border: none; border-radius: 6px; cursor: pointer; }
+  .menu button { background: #0078D7; color: white; }
+  .form button { background: #28a745; color: white; }
+  .volver { background: #6c757d; color: white; }
+  .exportar { background: #ffc107; color: black; }
+  input { width: 100%; padding: 8px; margin: 5px 0; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+  th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+  th { background: #0078D7; color: white; }
+  .btn-mini { padding: 4px 8px; margin: 2px; font-size: 12px; }
+  canvas { background: white; border-radius: 8px; padding: 10px; margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<h1>💼 Gestor Vending Pro + Exportación</h1>
+
+<!-- Menú principal -->
+<div id="home" class="screen active menu">
+  <button onclick="showScreen('menuEstanteria')">🗃️ Estantería</button>
+  <button onclick="showScreen('menuMaquinas')">🤖 Máquinas</button>
+  <button onclick="showScreen('dashboard')">📊 Dashboard</button>
+  <button onclick="showScreen('productos')">🧾 Gestión de Productos</button>
+</div>
+
+<!-- Submenús -->
+<div id="menuEstanteria" class="screen menu">
+  <h2>Gestión de Estantería</h2>
+  <button onclick="showScreen('entradaEst')">Registrar Entrada</button>
+  <button onclick="showScreen('salidaEst')">Registrar Salida</button>
+  <button class="volver" onclick="showScreen('home')">Volver</button>
+</div>
+
+<div id="menuMaquinas" class="screen menu">
+  <h2>Gestión de Máquinas</h2>
+  <button onclick="showScreen('entradaMaq')">Registrar Entrada</button>
+  <button onclick="showScreen('salidaMaq')">Registrar Salida</button>
+  <button class="volver" onclick="showScreen('home')">Volver</button>
+</div>
+
+<!-- Entradas y salidas -->
+<div id="entradaEst" class="screen form">
+  <h2>Entrada Estantería</h2>
+  <input id="prodEstEnt" placeholder="Producto ID">
+  <input id="cantEstEnt" type="number" placeholder="Cantidad">
+  <button onclick="registrarMovimiento('entrada','estanteria')">Guardar Entrada</button>
+  <button class="volver" onclick="showScreen('menuEstanteria')">Volver</button>
+  <p id="msgEstEnt"></p>
+</div>
+
+<div id="salidaEst" class="screen form">
+  <h2>Salida Estantería</h2>
+  <input id="prodEstSal" placeholder="Producto ID">
+  <input id="cantEstSal" type="number" placeholder="Cantidad">
+  <button onclick="registrarMovimiento('salida','estanteria')">Guardar Salida</button>
+  <button class="volver" onclick="showScreen('menuEstanteria')">Volver</button>
+  <p id="msgEstSal"></p>
+</div>
+
+<div id="entradaMaq" class="screen form">
+  <h2>Entrada Máquina</h2>
+  <input id="prodMaqEnt" placeholder="Producto ID">
+  <input id="cantMaqEnt" type="number" placeholder="Cantidad">
+  <button onclick="registrarMovimiento('entrada','maquina')">Guardar Entrada</button>
+  <button class="volver" onclick="showScreen('menuMaquinas')">Volver</button>
+  <p id="msgMaqEnt"></p>
+</div>
+
+<div id="salidaMaq" class="screen form">
+  <h2>Salida Máquina</h2>
+  <input id="prodMaqSal" placeholder="Producto ID">
+  <input id="cantMaqSal" type="number" placeholder="Cantidad">
+  <button onclick="registrarMovimiento('salida','maquina')">Guardar Salida</button>
+  <button class="volver" onclick="showScreen('menuMaquinas')">Volver</button>
+  <p id="msgMaqSal"></p>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboard" class="screen">
+  <h2>📊 Dashboard General</h2>
+
+  <button class="exportar" onclick="exportarCSV('inventarioEst','Inventario_Estanteria.csv')">💾 Exportar Estantería</button>
+  <button class="exportar" onclick="exportarCSV('inventarioMaq','Inventario_Maquinas.csv')">💾 Exportar Máquinas</button>
+  <button class="exportar" onclick="exportarCSV('movimientos','Movimientos.csv')">💾 Exportar Movimientos</button>
+
+  <h3>Estantería</h3>
+  <table id="tablaEst">
+    <thead><tr><th>ID</th><th>Nombre</th><th>Stock</th><th>Costo Unit.</th><th>Precio Venta</th><th>Costo Total</th><th>Beneficio Total</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h3>Máquinas</h3>
+  <table id="tablaMaq">
+    <thead><tr><th>ID</th><th>Nombre</th><th>Stock</th><th>Costo Unit.</th><th>Precio Venta</th><th>Costo Total</th><th>Beneficio Total</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h3>Movimientos</h3>
+  <table id="tablaMov">
+    <thead><tr><th>Fecha</th><th>Zona</th><th>Tipo</th><th>Producto</th><th>Cantidad</th><th>Stock Después</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- Gráficos -->
+  <h3>Visualización</h3>
+  <canvas id="chartBeneficios" height="100"></canvas>
+  <canvas id="chartStock" height="100"></canvas>
+
+  <button class="volver" onclick="showScreen('home')">Volver</button>
+</div>
+
+<!-- Gestión de Productos -->
+<div id="productos" class="screen">
+  <h2>🧾 Gestión de Productos</h2>
+  <table id="tablaProd">
+    <thead><tr><th>ID</th><th>Nombre</th><th>Costo Unit.</th><th>Precio Venta</th><th>Acciones</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h3>Añadir nuevo producto</h3>
+  <input id="nuevoID" placeholder="Producto ID">
+  <input id="nuevoNombre" placeholder="Nombre">
+  <input id="nuevoCosto" type="number" placeholder="Costo Unitario">
+  <input id="nuevoPrecio" type="number" placeholder="Precio Venta">
+  <button onclick="agregarProducto()">Agregar Producto</button>
+  <button class="volver" onclick="showScreen('home')">Volver</button>
+</div>
+
+<script>
+// === Datos iniciales ===
+let inventarioEst = JSON.parse(localStorage.getItem('inventarioEst')) || [
+  { ProductoID:'REF001', Nombre:'Coca-Cola Lata', Stock:13, Entradas:25, Salidas:14, CostoUnit:0.5, PrecioVenta:1.5 },
+  { ProductoID:'REF002', Nombre:'Agua Mineral', Stock:5, Entradas:25, Salidas:20, CostoUnit:0.3, PrecioVenta:1.0 },
+  { ProductoID:'REF003', Nombre:'Café Espresso', Stock:15, Entradas:15, Salidas:3, CostoUnit:0.4, PrecioVenta:1.2 }
+];
+let inventarioMaq = JSON.parse(localStorage.getItem('inventarioMaq')) || JSON.parse(JSON.stringify(inventarioEst));
+let movimientos = JSON.parse(localStorage.getItem('movimientos')) || [];
+
+let chartBenef = null;
+let chartStock = null;
+
+// === Funciones principales ===
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'dashboard') actualizarDashboard();
+  if (id === 'productos') mostrarProductos();
+}
+
+function registrarMovimiento(tipo, zona) {
+  const prod = document.getElementById(zona === 'estanteria' ?
+    (tipo === 'entrada' ? 'prodEstEnt' : 'prodEstSal') :
+    (tipo === 'entrada' ? 'prodMaqEnt' : 'prodMaqSal')).value;
+
+  const cant = parseInt(document.getElementById(zona === 'estanteria' ?
+    (tipo === 'entrada' ? 'cantEstEnt' : 'cantEstSal') :
+    (tipo === 'entrada' ? 'cantMaqEnt' : 'cantMaqSal')).value);
+
+  const msg = document.getElementById(zona === 'estanteria' ?
+    (tipo === 'entrada' ? 'msgEstEnt' : 'msgEstSal') :
+    (tipo === 'entrada' ? 'msgMaqEnt' : 'msgMaqSal'));
+
+  let inv = zona === 'estanteria' ? inventarioEst : inventarioMaq;
+  const item = inv.find(i => i.ProductoID === prod);
+  if (!item) { msg.textContent = "❌ Producto no encontrado."; msg.style.color = "red"; return; }
+  if (isNaN(cant) || cant <= 0) { msg.textContent = "Cantidad inválida."; msg.style.color = "red"; return; }
+  if (tipo === 'salida' && item.Stock < cant) { msg.textContent = "❌ Stock insuficiente."; msg.style.color = "red"; return; }
+
+  if (tipo === 'entrada') { item.Stock += cant; item.Entradas += cant; }
+  else { item.Stock -= cant; item.Salidas += cant; }
+
+  movimientos.push({ fecha: new Date().toLocaleString(), zona, tipo, producto: prod, cantidad: tipo === 'entrada' ? cant : -cant, stockDespues: item.Stock });
+
+  guardar();
+  msg.textContent = "✅ Movimiento registrado."; msg.style.color = "green";
+}
+
+function guardar() {
+  localStorage.setItem('inventarioEst', JSON.stringify(inventarioEst));
+  localStorage.setItem('inventarioMaq', JSON.stringify(inventarioMaq));
+  localStorage.setItem('movimientos', JSON.stringify(movimientos));
+}
+
+// === Exportar CSV ===
+function exportarCSV(tipo, nombreArchivo) {
+  let datos = [];
+  if (tipo === 'inventarioEst') datos = inventarioEst;
+  else if (tipo === 'inventarioMaq') datos = inventarioMaq;
+  else if (tipo === 'movimientos') datos = movimientos;
+  if (!datos.length) return alert("No hay datos para exportar");
+
+  const cabeceras = Object.keys(datos[0]);
+  const filas = datos.map(obj => cabeceras.map(c => `"${obj[c]}"`).join(','));
+  const csv = [cabeceras.join(','), ...filas].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = nombreArchivo;
+  link.click();
+}
+
+// === Dashboard y gráficos ===
+function actualizarDashboard() {
+  const render = (data, tbody) => {
+    tbody.innerHTML = '';
+    let totalCoste = 0, totalBenef = 0;
+    data.forEach(i => {
+      const costoTotal = i.Stock * i.CostoUnit;
+      const benefTotal = i.Stock * (i.PrecioVenta - i.CostoUnit);
+      totalCoste += costoTotal; totalBenef += benefTotal;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${i.ProductoID}</td><td>${i.Nombre}</td><td>${i.Stock}</td>
+                      <td>${i.CostoUnit.toFixed(2)}</td><td>${i.PrecioVenta.toFixed(2)}</td>
+                      <td>${costoTotal.toFixed(2)}</td><td>${benefTotal.toFixed(2)}</td>`;
+      tbody.appendChild(tr);
+    });
+    const trTotal = document.createElement('tr');
+    trTotal.innerHTML = `<td colspan="5"><b>Total</b></td><td><b>${totalCoste.toFixed(2)}</b></td><td><b>${totalBenef.toFixed(2)}</b></td>`;
+    tbody.appendChild(trTotal);
+  };
+
+  render(inventarioEst, document.querySelector('#tablaEst tbody'));
+  render(inventarioMaq, document.querySelector('#tablaMaq tbody'));
+
+  const movBody = document.querySelector('#tablaMov tbody');
+  movBody.innerHTML = '';
+  movimientos.slice().reverse().forEach(m => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${m.fecha}</td><td>${m.zona}</td><td>${m.tipo}</td><td>${m.producto}</td><td>${m.cantidad}</td><td>${m.stockDespues}</td>`;
+    movBody.appendChild(tr);
+  });
+
+  const labels = inventarioEst.map(i => i.Nombre);
+  const beneficios = inventarioEst.map(i => i.Stock * (i.PrecioVenta - i.CostoUnit));
+  const stocks = inventarioEst.map(i => i.Stock);
+
+  if (chartBenef) chartBenef.destroy();
+  if (chartStock) chartStock.destroy();
+
+  chartBenef = new Chart(document.getElementById('chartBeneficios'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Beneficio Total (€)', data: beneficios, backgroundColor: '#28a745' }] },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+  });
+
+  chartStock = new Chart(document.getElementById('chartStock'), {
+    type: 'pie',
+    data: { labels, datasets: [{ data: stocks, backgroundColor: ['#0078D7','#28a745','#ffc107','#dc3545','#6f42c1'] }] },
+    options: { plugins: { legend: { position: 'bottom' } } }
+  });
+}
+
+// === Gestión de productos ===
+function mostrarProductos() {
+  const tbody = document.querySelector('#tablaProd tbody');
+  tbody.innerHTML = '';
+  inventarioEst.forEach(i => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i.ProductoID}</td>
+      <td><input value="${i.Nombre}" onchange="editarProducto('${i.ProductoID}','nombre',this.value)"></td>
+      <td><input type="number" value="${i.CostoUnit}" onchange="editarProducto('${i.ProductoID}','costo',this.value)"></td>
+      <td><input type="number" value="${i.PrecioVenta}" onchange="editarProducto('${i.ProductoID}','precio',this.value)"></td>
+      <td><button class='btn-mini' onclick="borrarProducto('${i.ProductoID}')">🗑️</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function agregarProducto() {
+  const id = document.getElementById('nuevoID').value.trim();
+  const nombre = document.getElementById('nuevoNombre').value.trim();
+  const costo = parseFloat(document.getElementById('nuevoCosto').value);
+  const precio = parseFloat(document.getElementById('nuevoPrecio').value);
+  if (!id || !nombre || isNaN(costo) || isNaN(precio)) { alert('Completa todos los campos.'); return; }
+
+  if (inventarioEst.find(p => p.ProductoID === id)) { alert('ID existente.'); return; }
+
+  const nuevo = { ProductoID:id, Nombre:nombre, Stock:0, Entradas:0, Salidas:0, CostoUnit:costo, PrecioVenta:precio };
+  inventarioEst.push(nuevo);
+  inventarioMaq.push({...nuevo});
+  guardar();
+  mostrarProductos();
+  document.querySelectorAll('#nuevoID,#nuevoNombre,#nuevoCosto,#nuevoPrecio').forEach(i=>i.value='');
+}
+
+function editarProducto(id, campo, valor) {
+  const prod = inventarioEst.find(p => p.ProductoID === id);
+  if (!prod) return;
+  if (campo === 'nombre') prod.Nombre = valor;
+  if (campo === 'costo') prod.CostoUnit = parseFloat(valor) || 0;
+  if (campo === 'precio') prod.PrecioVenta = parseFloat(valor) || 0;
+  const prodM = inventarioMaq.find(p => p.ProductoID === id);
+  if (prodM) Object.assign(prodM, prod);
+  guardar();
+}
+
+function borrarProducto(id) {
+  if (!confirm('¿Eliminar producto ' + id + '?')) return;
+  inventarioEst = inventarioEst.filter(p => p.ProductoID !== id);
+  inventarioMaq = inventarioMaq.filter(p => p.ProductoID !== id);
+  guardar();
+  mostrarProductos();
+}
+</script>
+</body>
+</html>
